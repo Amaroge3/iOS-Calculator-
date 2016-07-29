@@ -1,4 +1,4 @@
-w//
+//
 //  ViewController.swift
 //  Calculator
 //
@@ -18,9 +18,8 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        
-     
     }
+    
     //displayvalue getter and setter
     private var displayValue: Double {
         get{
@@ -28,6 +27,14 @@ class ViewController: UIViewController {
         }
         set{
             display.text = String(newValue)
+        }
+    }
+    //undo action button
+    @IBAction func undoAction(sender: UIButton) {
+    calcBrain.undo()
+        if let brainDisplayValue = calcBrain.displayValue {
+            calcBrain.accumulator = brainDisplayValue
+            displayValue = brainDisplayValue
         }
     }
     override func didReceiveMemoryWarning() {
@@ -42,12 +49,23 @@ class ViewController: UIViewController {
     
     //method called when the digits are touched on the gui
     @IBAction func touchDigit(sender: UIButton) {
+       
         
+        calcBrain.displayValue = displayValue
+
         if (!userIsInMiddleOfTyping){
             if let title = sender.currentTitle{
                 if(title != "."){
                 display.text! = title
                 userIsInMiddleOfTyping = true
+                    calcBrain.setDescription(sender.currentTitle!)
+                    descriptionLabel.text! = calcBrain.description
+                }
+                else{
+                    display.text! = "0" + title
+                    userIsInMiddleOfTyping = true
+                    calcBrain.setDescription("0" + sender.currentTitle!)
+                    descriptionLabel.text! = calcBrain.description
                 }
             }
         }
@@ -56,41 +74,78 @@ class ViewController: UIViewController {
                 //limits the number of times the dot is entered into the calculator to one
                 if(display.text!.containsString(".") && title == "."){
                         title = ""
+                    
                 }
                 else{
                     display.text = display.text! + title
-
+                    calcBrain.setDescription(sender.currentTitle!)
+                    descriptionLabel.text! = calcBrain.description
                 }
                
             }
         }
 
         //communicates with the model to update the description of the description label
+       
+    }
+    
+    
+    //save a variable to use
+    @IBAction func saveVariable(sender:UIButton) {
+        calcBrain.M = displayValue
+    calcBrain.setDescription(sender.currentTitle!)
+    descriptionLabel.text! = calcBrain.description
+    }
+    
+    
+    //load variable
+    @IBAction func loadVariable(sender: UIButton) {
+        if let variable = calcBrain.M{
+            displayValue = variable
+            calcBrain.accumulator = displayValue
+        }
+        calcBrain.setOperand(sender.currentTitle!)
+        calcBrain.M = nil
         calcBrain.setDescription(sender.currentTitle!)
         descriptionLabel.text! = calcBrain.description
+        print(calcBrain.variableValues["M"]!)
     }
+    
+    
     //called when one of the operation buttons are pressed
     @IBAction func performOperation(sender: UIButton){
-    if (userIsInMiddleOfTyping){
+        calcBrain.addUndoAction(displayValue)
+        calcBrain.displayValue = displayValue
+      
+       
+        
+        //sets the description when user is in the middle of typing
+        if (userIsInMiddleOfTyping){
+            calcBrain.setDescription(" " + sender.currentTitle! + " ")
+        }
+            
+        //sets the description also when the user is not in the middle of typing a number
+        else if (!userIsInMiddleOfTyping){
+            calcBrain.setDescription(String(displayValue) + " " + sender.currentTitle! + " ")
+            
+        }
+
+        
+        if (userIsInMiddleOfTyping){
         calcBrain.setOperand(displayValue)
         userIsInMiddleOfTyping = false
-    }
-        //adds the operation symbol to the description variable in the model class.
-        calcBrain.setDescription(" " + sender.currentTitle! + " ")
+        }
+    
         
         //when clear is pressed clear the screen and make a new instance of CalculatorBrain
         if let mathematicalOperation = sender.currentTitle{
             if(mathematicalOperation == "Clear"){
-                calcBrain = CalculatorBrain()
-                display.text! = "0"
-                descriptionLabel!.text = ""
-                calcBrain.setDescription("")
+                displayValue = 0
             }
-            else{
                 calcBrain.performOperation(mathematicalOperation)
                 displayValue = calcBrain.result
                 descriptionLabel.text! = calcBrain.description
-            }
+            
         }
 
     }

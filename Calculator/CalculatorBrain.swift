@@ -17,9 +17,24 @@ class CalculatorBrain{
     //total variable
     var accumulator = 0.0
     var pending: PendingBinaryOperationInfo?
-    
+    var isPartialResult = false
     //description string for the description label
     var description = ""
+    
+    
+    var internalProgram = [AnyObject]()
+    
+    //variable dictionary
+    var variableValues: Dictionary <String,Double> = [:]
+    
+    //display of the label
+    var displayValue: Double? = nil
+    
+    //variable optional for saving value
+    var M: Double? = 0.0
+    
+    //previous values of display for undo button
+    var previousActions = [String]()
     
     struct PendingBinaryOperationInfo {
         var binaryFunction: (Double, Double) -> Double
@@ -34,6 +49,7 @@ class CalculatorBrain{
     //sets the operand
     func setOperand(operand: Double){
         accumulator = operand
+        internalProgram.append(operand)
     }
     //operation types with associated values
     enum Operation {
@@ -41,27 +57,38 @@ class CalculatorBrain{
         case Unary((Double) -> Double)
         case Binary((Double, Double) -> Double)
         case Equals
+        case Clear
     }
-    
-    
-    
-    func isUnary(operandsAndOperators: String) -> Bool{
-        if let operand = operations[operandsAndOperators]{
-            switch operand{
-            case Operation.Equals:
-                print("equals")
-                return true
-            case Operation.Binary(_):
-                print("binary")
-            case Operation.Constant(_):
-                print("contant")
-            case Operation.Unary(_):
-                print("unary")
-            }
-        }
-    
-        return false
+    //clear the calculator
+    func clear(){
+        accumulator = 0
+        pending = nil
+        description = ""
+        internalProgram.removeAll()
     }
+//    
+//    private func isUnaryOrEquals(operandsAndOperators: String) -> Bool{
+//        if let operand = operations[operandsAndOperators]{
+//            switch operand{
+//            case Operation.Equals:
+//                return true
+//            case Operation.Binary(_):
+//                break
+//            case Operation.Constant(_):
+//                break
+//            case Operation.Unary(_):
+//                return true
+//            default:
+//                break
+//            }
+//        }
+//    
+//        return false
+//    }
+
+    
+    
+    
     //executes the pending binary operation
     func executePendingBinaryOperation(){
  
@@ -87,21 +114,57 @@ class CalculatorBrain{
         "+" : Operation.Binary({ $0 + $1 }),
         "-" : Operation.Binary({ $0 - $1 }),
         "÷" : Operation.Binary({ $0 / $1 }),
-        "=" : Operation.Equals
+        "=" : Operation.Equals,
+        "Clear": Operation.Clear
     ]
     
     
     //set the description of the top most label
     internal func setDescription(operandsAndOperators: String){
-        if (isUnary(operandsAndOperators)){
-            description = description + operandsAndOperators + "("
-        }
-        else {
             description += operandsAndOperators
-
+        
+        
+    }
+    
+    typealias PropertyList = AnyObject
+    
+    
+    var program: PropertyList{
+        get{
+            return internalProgram
+        }
+        set{
+            clear()
+            if let arrayOfOps = newValue as? [AnyObject]{
+                for op in arrayOfOps{
+                    if let operand = op as? Double {
+                        setOperand(operand)
+                    } else if let operation = op as? String{
+                        performOperation(operation)
+                    }
+                }
+            }
         }
     }
     
+    //save to dictionary the variable value
+    func setOperand(variableName: String){
+        if let mValue = M {
+            variableValues[variableName] = mValue
+        }
+    }
+    
+    //undo operation for the Undo button
+    func undo(){
+        if (previousActions.count > 0){
+            displayValue = Double(previousActions.removeLast())
+        }
+    }
+    
+    //function to add the last value
+    func addUndoAction(displayValue: Double){
+        previousActions.append(String(displayValue))
+    }
     //performs the operation when an operation button is clicked on the gui
     internal func performOperation(symbol: String){
        
@@ -114,10 +177,13 @@ class CalculatorBrain{
             case .Binary(let function):
                 executePendingBinaryOperation()
                 pending = PendingBinaryOperationInfo(binaryFunction: function, firstOperand: accumulator)
+                isPartialResult = true
             case .Equals:
                 executePendingBinaryOperation()
+                isPartialResult = false
+            case .Clear:
+                clear()
             }
         }
-        isUnary(symbol)
     }
 }
