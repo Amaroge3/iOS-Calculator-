@@ -8,13 +8,14 @@
 
 import UIKit
 import Foundation
-class ViewController: UIViewController {
+class CalculatorViewController: UIViewController {
 
     @IBOutlet weak var display: UILabel!
     var calcBrain =  CalculatorBrain()
     var userIsInMiddleOfTyping = false
     
-        
+ 
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
