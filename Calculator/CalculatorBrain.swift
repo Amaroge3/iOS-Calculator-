@@ -12,17 +12,20 @@ import Foundation
 /*
  The model of the calculator. Has the functionalities of the calculator.
  */
+
 class CalculatorBrain{
     
     //total variable
     var accumulator = 0.0
     var pending: PendingBinaryOperationInfo?
-    var isPartialResult = false
+    var isPartialResult = true
     //description string for the description label
     var description = ""
+    var lastOperation = ""
     
+    //internal program of the calculator
+    private var internalProgram = [AnyObject]()
     
-    var internalProgram = [AnyObject]()
     
     //variable dictionary
     var variableValues: Dictionary <String,Double> = [:]
@@ -66,32 +69,11 @@ class CalculatorBrain{
         description = ""
         internalProgram.removeAll()
     }
-//    
-//    private func isUnaryOrEquals(operandsAndOperators: String) -> Bool{
-//        if let operand = operations[operandsAndOperators]{
-//            switch operand{
-//            case Operation.Equals:
-//                return true
-//            case Operation.Binary(_):
-//                break
-//            case Operation.Constant(_):
-//                break
-//            case Operation.Unary(_):
-//                return true
-//            default:
-//                break
-//            }
-//        }
-//    
-//        return false
-//    }
-
-    
     
     
     //executes the pending binary operation
     func executePendingBinaryOperation(){
- 
+        
         if pending != nil {
             accumulator = pending!.binaryFunction(pending!.firstOperand, accumulator)
             pending = nil
@@ -102,13 +84,13 @@ class CalculatorBrain{
     
     //dictionary that looks up a string for its corresponding operation
     private var operations: Dictionary <String, Operation> = [
-       
+        
         "∏" : Operation.Constant(M_PI),
         "℮" : Operation.Constant(M_E),
         "√" : Operation.Unary(sqrt),
         "sin" : Operation.Unary(cos),
         "cos" : Operation.Unary(cos),
-        "log(n)" : Operation.Unary(log),
+        "log" : Operation.Unary(log),
         "pow" : Operation.Binary(pow),
         "×" : Operation.Binary({ $0 * $1 }),
         "+" : Operation.Binary({ $0 + $1 }),
@@ -121,9 +103,27 @@ class CalculatorBrain{
     
     //set the description of the top most label
     internal func setDescription(operandsAndOperators: String){
-            description += operandsAndOperators
         
-        
+        switch operandsAndOperators{
+        case "√", "cos", "sin", "log":
+            isPartialResult = false
+            description = ""
+            description += operandsAndOperators + "(" + String(displayValue!) + ")"
+            lastOperation = operandsAndOperators
+        case "pow":
+            isPartialResult = true
+            description += operandsAndOperators + "("
+            lastOperation = operandsAndOperators
+        default:
+            if isPartialResult == true && lastOperation == "pow"{
+                description += operandsAndOperators + ")"
+                isPartialResult = false
+                lastOperation = ""
+            }
+            else{
+                description += operandsAndOperators
+            }
+        }
     }
     
     typealias PropertyList = AnyObject
@@ -165,9 +165,12 @@ class CalculatorBrain{
     func addUndoAction(displayValue: Double){
         previousActions.append(String(displayValue))
     }
+    
+    
+    
     //performs the operation when an operation button is clicked on the gui
     internal func performOperation(symbol: String){
-       
+        internalProgram.append(symbol)
         if let operation = operations[symbol]{
             switch operation{
             case .Constant(let value):
